@@ -1,4 +1,6 @@
 import java.util.*;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 
 
 class App {
@@ -768,7 +770,7 @@ class App {
                     borrowBook();
                     break;
                 case 2:
-                    returnBook();
+                    //returnBook();
                     break;
                 case 3:
                     return;
@@ -783,35 +785,377 @@ class App {
     // Method to Borrrow Books
 
     static void borrowBook() {
+      int borrowBookCount = 1;
+
+      while (borrowBookCount <= 3) {
+        System.out.println("==== BORROW BOOK ====");
+        System.out.println();
+
+        System.out.print("Enter Member ID: ");
+        int memberId = scanner.nextInt();
+        scanner.nextLine(); // Consume newline character
+
+        // Check if member exists
         
+        boolean memberFound = false;
+        for (int i = 0; i < memberCount; i++) {
+            if (memberIds[i] == memberId) {
+                memberFound = true;
+                break;
+            }
+        }
+
+        if (!memberFound) {
+            System.out.println("Member ID not found.");
+            return;
+        }
+
+        System.out.print("Enter Book ID to borrow: ");
+        String bookId = scanner.nextLine();
+
+        boolean bookFound = false;
+        for (int i = 0; i < bookCount; i++) {
+            if (bookIds[i].equals(bookId)) {
+                bookFound = true;
+                if (bookCopiesAvailable[i] <= 0) {
+                    System.out.println("No copies available for this book.");
+                    return;
+                }
+                break;
+            }
+        }
+
+        if (!bookFound) {
+            System.out.println("Book ID not found.");
+            return;
+        }
+
+        // Create a new borrowing transaction
+        transactionIds[transactionCount] = transactionCount + 1; // Incremental transaction ID
+        transactionMemberIds[transactionCount] = memberId;
+        transactionBookIds[transactionCount] = bookId;
+
+        // Get current date as borrow date
+        transactionBorrowDates[transactionCount] = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")); // Placeholder for current date
+        transactionDueDates[transactionCount] = LocalDate.now().plusDays(14).format(DateTimeFormatter.ofPattern("yyyy-MM-dd")); // Placeholder for due date
+        transactionReturnDates[transactionCount] = ""; // Not returned yet
+        transactionFineAmounts[transactionCount] = 0.0; // No fine initially
+
+        // Update book availability
+        for (int i = 0; i < bookCount; i++) {
+            if (bookIds[i].equals(bookId)) {
+                bookCopiesAvailable[i]--;
+                break;
+            }
+        }
+
+        transactionCount++;
+        System.out.println("Book borrowed successfully.");
+        System.out.println();
+
+        if (borrowBookCount == 3) {
+          System.out.println("You have reached the maximum number of borrow attempts.");
+          return;
+        }else if (borrowBookCount == 2) {
+            System.out.println("You can borrow one more book. (or If you don't want to borrow more books, you can return to the main menu. Press -1)");
+            System.out.println();
+            System.out.println("If you want to borrow more books, please press Enter.");
+            String input = scanner.nextLine();
+
+            if (!input.isEmpty()) {
+                borrowBookCount++;
+                continue;
+            }else if (input.equals("-1")) {
+                return; // Exit borrowing operation
+            }
+
+        }else if (borrowBookCount == 1) {
+            System.out.println("You can borrow two more books. (or If you don't want to borrow more books, you can return to the main menu. Press -1)");
+            System.out.println();
+            System.out.println("If you want to borrow more books, please press Enter.");
+            String input = scanner.nextLine();
+            if (!input.isEmpty()) {
+                borrowBookCount++;
+                continue;
+            }else if (input.equals("-1")) {
+                return; // Exit borrowing operation 
+            }
+
+        
+
+      }
+
+      }
+
+    }
+
+
+    // Method to Return Books
+
+    static void returnBook() {
+        if (transactionCount == 0) {
+            System.out.println("No borrowing transactions found.");
+            return;
+        }
+
+        System.out.println("==== RETURN BOOK ====");
+        System.out.println();
+
+        System.out.print("Enter Member ID: ");
+        int memberId = scanner.nextInt();
+        scanner.nextLine(); // Consume newline character
+
+        // Check if member exists
+        boolean memberFound = false;
+        for (int i = 0; i < memberCount; i++) {
+            if (memberIds[i] == memberId) {
+                memberFound = true;
+                break;
+            }
+        }
+
+        if (!memberFound) {
+            System.out.println("Member ID not found.");
+            return;
+        }
+
+        System.out.print("Enter Book ID to return: ");
+        String bookId = scanner.nextLine();
+
+        boolean transactionFound = false;
+        for (int i = 0; i < transactionCount; i++) {
+            if (transactionMemberIds[i] == memberId && transactionBookIds[i].equals(bookId) && transactionReturnDates[i].isEmpty()) {
+                transactionFound = true;
+
+                // Set return date to current date
+                transactionReturnDates[i] = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+
+                // Calculate fine if any
+                LocalDate dueDate = LocalDate.parse(transactionDueDates[i], DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+                LocalDate returnDate = LocalDate.parse(transactionReturnDates[i], DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+                if (returnDate.isAfter(dueDate)) {
+                    long daysLate = returnDate.toEpochDay() - dueDate.toEpochDay();
+                    transactionFineAmounts[i] = daysLate * 100.0; // Assuming a fine of $100 per day late
+                    System.out.printf("Book returned late. Fine amount: $%.2f%n", transactionFineAmounts[i]);
+                } else {
+                    transactionFineAmounts[i] = 0.0; // No fine
+                    System.out.println("Book returned on time. No fine.");
+                }
+
+                // Update book availability
+                for (int j = 0; j < bookCount; j++) {
+                    if (bookIds[j].equals(bookId)) {
+                        bookCopiesAvailable[j]++;
+                        break;
+                    }
+                }
+
+                System.out.println("Book returned successfully.");
+                return;
+            }
+        }
+
+        if (!transactionFound) {
+            System.out.println("No borrowing record found for this book and member.");
+        }
+    }
+
+
+
+
+// ------------------------------------------------------------- RESERVATION System Module -----------------------------------------------------------------------------------
+
+
+    static void manageReservation() {
+
+
+    while (true) {
+        System.out.println("\n==== Reservation Management ====");
+        System.out.println("1. Add Reservation");
+        System.out.println("2. View All Reservations");
+        System.out.println("3. Cancel Reservation");
+        System.out.println("4. Back to Main Menu");
+        
+        System.out.print("Enter your choice: ");
+
+        int choice = scanner.nextInt();
+        scanner.nextLine(); // Consume newline character
+
+        switch (choice) {
+            case 1:
+                addReservation();
+                break;
+            case 2:
+                viewAllReservations();
+                break;
+            case 3:
+                cancelReservation();
+                break;
+            case 4:
+                return; // Go back to main menu
+            default:
+                System.out.println("Invalid choice. Please try again.");
+        }
+    }
+
+
+    }
+
+
+
+    static void addReservation() {
+    System.out.println("==== ADD RESERVATION ====");
+    System.out.println();
+
+    System.out.print("Enter Member ID: ");
+    int memberId = scanner.nextInt();
+    scanner.nextLine(); // Consume newline character
+
+    // Check if member exists
+    boolean memberFound = false;
+    for (int i = 0; i < memberCount; i++) {
+        if (memberIds[i] == memberId) {
+            memberFound = true;
+            break;
+        }
+    }
+
+    if (!memberFound) {
+        System.out.println("Member ID not found.");
+        return;
+    }
+
+    System.out.print("Enter Book ID to reserve: ");
+    String bookId = scanner.nextLine();
+
+    boolean bookFound = false;
+    for (int i = 0; i < bookCount; i++) {
+        if (bookIds[i].equals(bookId)) {
+            bookFound = true;
+            break;
+        }
+    }
+
+    if (!bookFound) {
+        System.out.println("Book ID not found.");
+        return;
+    }
+
+    reservationIds[reservationCount] = reservationCount + 1; // Incremental reservation ID
+    reservationBookIds[reservationCount] = bookId;
+    reservationMemberIds[reservationCount] = memberId;
+    reservationDates[reservationCount] = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")); // Current date as reservation date
+    reservationStatuses[reservationCount] = "Active";
+    reservationCount++;
+
+    // Add reservation logic here
+    // For simplicity, we will just print a confirmation message
+    System.out.println("Reservation added successfully for Member ID " + memberId + " and Book ID " + bookId);
+
+
+    }   
+
+
+
+    static void viewAllReservations() {
+        if (reservationCount == 0) {
+            System.out.println("No reservations found.");
+            return;
+        }
+
+        System.out.println("==== ALL RESERVATIONS ====");
+        for (int i = 0; i < reservationCount; i++) {
+            System.out.println("Reservation ID: " + reservationIds[i]);
+            System.out.println("Member ID: " + reservationMemberIds[i]);
+            System.out.println("Book ID: " + reservationBookIds[i]);
+            System.out.println("Reservation Date: " + reservationDates[i]);
+            System.out.println("Status: " + reservationStatuses[i]);
+            System.out.println("-------------------------");
+            System.out.println();
+        }
+
+        
+    }
+
+    static void cancelReservation() {
+        if (reservationCount == 0) {
+            System.out.println("No reservations found.");
+            return;
+        }
+
+        System.out.println("==== CANCEL RESERVATION ====");
+        System.out.println();
+
+        System.out.print("Enter Reservation ID to cancel: ");
+        int reservationId = scanner.nextInt();
+        scanner.nextLine(); // Consume newline character
+
+        boolean reservationFound = false;
+        for (int i = 0; i < reservationCount; i++) {
+            if (reservationIds[i] == reservationId) {
+                reservationFound = true;
+                reservationStatuses[i] = "Cancelled"; // Update status to cancelled
+                System.out.println("Reservation cancelled successfully.");
+                return;
+            }
+        }
+
+        if (!reservationFound) {
+            System.out.println("Reservation ID not found.");
+        }
+
     }
 
 
 
 
 
+// -----------------------------------------------------   REPORT GENERATION   -----------------------------------------------------
+
+    static void generateReports() {
+        System.out.println("\n====== REPORT GENERATION ======");
+        System.out.println("1. Library Statistics");
+        System.out.println("2. Member Activity Report");
+        System.out.println("3. Popular Books Report");
+        System.out.println("4. Overdue Books Report");
+        System.out.println("5. Back to Main Menu");
+        System.out.print("Enter your choice: ");
+
+        int choice = scanner.nextInt();
+        scanner.nextLine(); // Consume newline character
+
+        switch (choice) {
+            case 1:
+                generateLibraryStatistics();
+                break;
+            case 2:
+                generateMemberActivityReport();
+                break;
+            case 3:
+                generatePopularBooksReport();
+                break;
+            case 4:
+                generateOverdueBooksReport();
+                break;
+            case 5:
+                return; // Go back to main menu
+            default:
+                System.out.println("Invalid choice. Please try again.");
+        }
 
 
+    }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+// Method to generate library statistics report
+static void generateLibraryStatistics() {
+    System.out.println("\n====== LIBRARY STATISTICS ======");
+    System.out.println("Total Members: " + memberCount);
+    System.out.println("Total Books: " + bookCount);
+    System.out.println("Total Borrowed Books: " + borrowedBookCount);
+    System.out.println("Total Reservations: " + reservationCount);
+    System.out.println("===============================");
+}
 
 
 
@@ -849,10 +1193,10 @@ class App {
                     manageBorrowingOperations();
                     break;
                 case 4:
-                    //manageReservation();
+                    manageReservation();
                     break;
                 case 5:
-                    //generateReports();
+                    generateReports();
                     break;
                 case 6:
                     System.out.println("Exiting...");
